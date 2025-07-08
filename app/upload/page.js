@@ -5,10 +5,11 @@ import uploadStyles from "./upload.module.css";
 import Image from "next/image";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Papa from "papaparse";
 
 export default function UploadPage() {
   const [csvName, setCsvName] = useState("");
-  const [imgPreview, setImgPreview] = useState("/upload.png");
+  const [imgPreview, setImgPreview] = useState("https://images.unsplash.com/photo-1622547748225-3fc4abd2cca0?q=80&w=1332&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D");
   const [menuOpen, setMenuOpen] = useState(false);
   const [csvProgress, setCsvProgress] = useState(0);
   const [imgProgress, setImgProgress] = useState(0);
@@ -50,6 +51,17 @@ export default function UploadPage() {
     if (file) {
       setCsvName(file.name);
       setCsvUploaded(false);
+      // Parse CSV and store in localStorage
+      Papa.parse(file, {
+        complete: function(results) {
+          if (results.data && results.data.length > 1) {
+            const headers = results.data[0];
+            const rows = results.data.slice(1).filter(row => row.length === headers.length);
+            localStorage.setItem('csvHeaders', JSON.stringify(headers));
+            localStorage.setItem('csvRows', JSON.stringify(rows));
+          }
+        }
+      });
       uploadFile(file, setCsvProgress, setCsvUploaded);
     }
   }
@@ -60,6 +72,7 @@ export default function UploadPage() {
       uploadFile(file, setImgProgress, setImgUploaded, () => {
         const url = URL.createObjectURL(file);
         setImgPreview(url);
+        localStorage.setItem('uploadedImageUrl', url);
       });
     }
   }
@@ -88,10 +101,11 @@ export default function UploadPage() {
     if (csvInput.current) csvInput.current.value = "";
   }
   function clearImg() {
-    setImgPreview("/upload.png");
+    setImgPreview("https://images.unsplash.com/photo-1622547748225-3fc4abd2cca0?q=80&w=1332&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D");
     setImgProgress(0);
     setImgUploaded(false);
     if (imgInput.current) imgInput.current.value = "";
+    localStorage.removeItem('uploadedImageUrl');
   }
 
   return (
@@ -193,7 +207,6 @@ export default function UploadPage() {
           <Image src={imgPreview} alt="Template Preview" width={700} height={440} style={{objectFit:"cover", width:"100%", height:"100%", borderRadius:16}} />
         </div>
         <div className={uploadStyles.uploadActions}>
-          <button className={uploadStyles.uploadButton} type="button" style={{background:'#ececec', color:'#181028', fontWeight:600}}>Edit Template</button>
           <button
             className={uploadStyles.uploadButton}
             type="button"
